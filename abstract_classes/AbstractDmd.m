@@ -55,15 +55,15 @@ classdef AbstractDmd < SettingsImportableFromStruct
         
         function self = AbstractDmd(subclass_set_names, settings)
             %% Initialize with defaults
-            defaults = struct; %The default values
-            defaults.verbose = true;
-            defaults.dt = 1;
-            defaults.dmd_percent = 0.95;
-            defaults.model_order = -1;
-            defaults.to_subtract_mean = false;
-            defaults.plotter_set = struct();
-            defaults.augment_data = 0;
-            defaults.t0_each_bin = true;
+            defaults = struct(... %The default values
+            	'verbose',true,...
+                'dt',1,...
+            	'dmd_percent',0.95,...
+            	'model_order',-1,...
+            	'to_subtract_mean',false,...
+            	'plotter_set',struct(),...
+            	'augment_data',0,...
+            	't0_each_bin',true);
             
             if ~exist('settings','var')
                 settings = struct;
@@ -85,11 +85,10 @@ classdef AbstractDmd < SettingsImportableFromStruct
                 end
             end
             
-            [self.verbose, self.dt,...
-                self.dmd_percent, self.model_order, self.to_subtract_mean,...
-                self.plotter_set, ...
-                self.augment_data, self.t0_each_bin] ...
-                = v2struct(defaults); %Unpacks the struct into variables
+            for key = fieldnames(defaults).'
+                k = key{1};
+                self.(k) = defaults.(k);
+            end %Unpacks the struct into variables
             
             %Make sure the settings are the same for the plotter objects
             self.plotter_set.dt = self.dt;
