@@ -1,4 +1,4 @@
-classdef abstractDMD < settings_importable_from_struct
+classdef AbstractDmd < SettingsImportableFromStruct
     % Abstract DMD class; do not call directly!
     %
     % INPUTS
@@ -30,46 +30,46 @@ classdef abstractDMD < settings_importable_from_struct
         raw
         dat
         verbose
-        modelOrder
-        augmentData
+        model_order
+        augment_data
         sz
-        t0EachBin %Restart the dmd modes at t=0 at each bin
+        t0_each_bin %Restart the dmd modes at t=0 at each bin
         tspan
         
         approx_all
         
         %For the DMDplotter object
-        plotterSet
+        plotter_set
         %Imported
         filename
         original_sz
         %User processing settings
         dt
-        toSubtractMean
-        dmdPercent
+        to_subtract_mean
+        dmd_percent
         %Plotter dictionary, if option is used
-        DMDplotter_all
+        PlotterDmd_all
     end
     
     methods
         
-        function self = abstractDMD(subclassSetNames, settings)
+        function self = AbstractDmd(subclass_set_names, settings)
             %% Initialize with defaults
             defaults = struct; %The default values
             defaults.verbose = true;
             defaults.dt = 1;
-            defaults.dmdPercent = 0.95;
-            defaults.modelOrder = -1;
-            defaults.toSubtractMean = false;
-            defaults.plotterSet = struct();
-            defaults.augmentData = 0;
-            defaults.t0EachBin = true;
+            defaults.dmd_percent = 0.95;
+            defaults.model_order = -1;
+            defaults.to_subtract_mean = false;
+            defaults.plotter_set = struct();
+            defaults.augment_data = 0;
+            defaults.t0_each_bin = true;
             
             if ~exist('settings','var')
                 settings = struct;
             end
-            if ~exist('subclassSetNames','var')
-                subclassSetNames = {''};
+            if ~exist('subclass_set_names','var')
+                subclass_set_names = {''};
             end
             
             namesS = fieldnames(settings);
@@ -80,29 +80,27 @@ classdef abstractDMD < settings_importable_from_struct
                 
                 if ismember(n, namesD)
                     defaults.(n) = settings.(n);
-                elseif ~ismember(n, subclassSetNames)
+                elseif ~ismember(n, subclass_set_names)
                     fprintf('Warning: "%s" setting not used\n',n)
                 end
             end
             
             [self.verbose, self.dt,...
-                self.dmdPercent, self.modelOrder, self.toSubtractMean,...
-                self.plotterSet, ...
-                self.augmentData, self.t0EachBin] ...
+                self.dmd_percent, self.model_order, self.to_subtract_mean,...
+                self.plotter_set, ...
+                self.augment_data, self.t0_each_bin] ...
                 = v2struct(defaults); %Unpacks the struct into variables
             
             %Make sure the settings are the same for the plotter objects
-            self.plotterSet.dt = self.dt;
-            %             self.plotterSet.toSubtractMean = self.toSubtractMean;
-            %             self.plotterSet.dmdPercent = self.dmdPercent;
-            %             self.plotterSet.modelOrder = self.modelOrder;
+            self.plotter_set.dt = self.dt;
+            %             self.plotter_set.to_subtract_mean = self.to_subtract_mean;
+            %             self.plotter_set.dmd_percent = self.dmd_percent;
+            %             self.plotter_set.model_order = self.model_order;
             
             % Initialize the DMD object containers
-            self.DMDplotter_all = containers.Map();
+            self.PlotterDmd_all = containers.Map();
             self.approx_all = containers.Map();
             %==========================================================================
-            
-            
         end
         
         
@@ -132,7 +130,7 @@ classdef abstractDMD < settings_importable_from_struct
             %If augmenting, stack data offset by 1 column on top of itself;
             %note that this decreases the overall number of columns (time
             %slices)
-            aug = self.augmentData;
+            aug = self.augment_data;
             self.original_sz = self.sz;
             if aug>0
                 newSz = [self.sz(1)*aug, self.sz(2)-aug];
@@ -147,7 +145,7 @@ classdef abstractDMD < settings_importable_from_struct
             end
             
             self.dat = self.raw;
-            if self.toSubtractMean
+            if self.to_subtract_mean
                 for jM=1:self.sz(1)
                     self.dat(jM,:) = self.raw(jM,:) - mean(self.raw(jM,:));
                 end
