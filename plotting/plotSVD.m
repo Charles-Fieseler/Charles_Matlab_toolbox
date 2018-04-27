@@ -8,13 +8,17 @@ function [u,s,v,proj3d] = plotSVD( dat, which_plots )
 if ~exist('which_plots','var')
     which_plots = struct();
 end
-defaults = containers.Map(...
-    {'average','sigma','PCA3d','PCA_opt','sigma_modes'},...
-    {false,true,false,'',[1 2]});
-for key = defaults.keys
+defaults = struct(...
+    'average',false,...
+    'sigma',true,...
+    'PCA3d',false,...
+    'PCA_opt','',...
+    'sigma_modes',[1 2],...
+    'to_subtract_mean',true);
+for key = fieldnames(defaults).'
     k = key{1};
     if ~isfield(which_plots, k)
-        which_plots.(k) = defaults(k);
+        which_plots.(k) = defaults.(k);
     end
 end
 %==========================================================================
@@ -22,9 +26,13 @@ end
 %% Subtract off the averages
 sz = size(dat);
 %datmean = zeros(sz(2),1);
-for j = sz(1):-1:1
-    datmean(j) = mean(dat(j,:));
-    dat(j,:) = dat(j,:) - datmean(j); %Subtract off the average voltage for each site
+if which_plots.to_subtract_mean
+    datmean = mean(dat,2);
+    dat = dat - datmean;
+%     for j = sz(1):-1:1
+%         datmean(j) = mean(dat(j,:));
+%         dat(j,:) = dat(j,:) - datmean(j); %Subtract off the average voltage for each site
+%     end
 end
 
 
