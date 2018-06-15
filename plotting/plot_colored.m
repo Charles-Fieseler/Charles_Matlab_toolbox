@@ -24,13 +24,17 @@ if num_states>7
     % Makes the 8th and later categories black (otherwise would repeat)
     cmap(8:end,:) = zeros(size(cmap(8:end,:)));
 end
-fig = figure;
+fig = figure('DefaultAxesFontSize',12);
 hold on
 f = gca;
 for jC = unique(categories)
     ind = find(categories==jC);
-    plot3(x(ind), y(ind), z(ind), plot_options, 'LineWidth',2);
-    f.Children(1).Color = cmap(jC,:);
+    if ~contains(plot_options,'.')
+        scatter3(x(ind), y(ind), z(ind), 100, plot_options, 'Filled');
+    else
+        scatter3(x(ind), y(ind), z(ind), 100, plot_options);
+    end
+    f.Children(1).CData = cmap(jC,:);
 end
 xlabel('1st mode')
 ylabel('2nd mode')
