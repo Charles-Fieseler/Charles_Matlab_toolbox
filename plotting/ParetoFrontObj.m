@@ -101,7 +101,7 @@ classdef ParetoFrontObj < SettingsImportableFromStruct
             settings.(setting_name) = setting_val;
             these_obj = cell(size(self.x_vector));
             
-            t_start = tic;
+            tic;
             for i=1:length(self.x_vector)
                 this_x = self.x_vector(i);
                 settings.(self.x_fieldname) = this_x;
@@ -110,8 +110,8 @@ classdef ParetoFrontObj < SettingsImportableFromStruct
                     self.iterable_func(self.file_or_dat, settings);
                 
                 if i == self.to_estimate_time
-                    t = toc(t_start);
-                    average_t = (t-t_start)/self.to_estimate_time;
+                    t = toc;
+                    average_t = t/self.to_estimate_time;
                     estimated_end = average_t * (length(self.x_vector)-i);
                     fprintf('Average time over %d runs: %f\n',...
                         i, average_t)
@@ -119,15 +119,10 @@ classdef ParetoFrontObj < SettingsImportableFromStruct
                 end
             end
             
-            t = toc(t_start);
-            fprintf('Total time over %d runs: %f\n', i, t-t_start)
+            t = toc;
+            fprintf('Total time over %d runs: %f\n', i, t)
             
-            if ~isfield(self.obj_struct,setting_val)
-                self.obj_struct.(setting_val) = these_obj;
-            else
-                self.obj_struct.(setting_val) = ...
-                    [self.obj_struct.(setting_val) these_obj];
-            end
+            self.save_simulation(setting_val, these_obj);
         end
         
         function add_iteration_value(self, setting_name, setting_val)
@@ -168,11 +163,16 @@ classdef ParetoFrontObj < SettingsImportableFromStruct
                 fieldname = fieldname{1};
             end
             if ~exist('which_class','var')
-                which_class = self.fields_to_plot{1};
+                for i=1:length(self.fields_to_plot)
+                    self.save_y_vals(fieldname, self.fields_to_plot{i});
+                end
+                return
             end
             
             sz = length(self.x_vector);
-            line_names = self.iterate_settings.(fieldname);
+            line_names = self.make_valid_name(...
+                self.iterate_settings.(fieldname));
+            
             for i=1:length(line_names)
                 this_line_name = line_names{i};
                 y_vals = zeros(sz,1);
@@ -180,19 +180,110 @@ classdef ParetoFrontObj < SettingsImportableFromStruct
                 for j=1:sz
                     y_vals(j) = self.y_val_func(these_obj{j}, which_class);
                 end
-                self.y_struct.(this_line_name) = y_vals;
+                y_name = self.make_valid_name(...
+                    self.iterate_settings.(fieldname), which_class);
+                self.y_struct.(y_name) = y_vals;
+            end
+        end
+        
+        function save_combined_y_val(self, fname1, fname2, ...
+                weight1_over_2, non_neg)
+%                 both_contain_str, one_contain_str)
+            % Uses already saved y_vals
+            %   Should have the same number of values saved
+            %   Can combine different fields by a substring of their
+            %   fieldname, use both_contain_str for substrings they should
+            %   both contain and one_contain_str for strings only one
+            %   should contain... TODO
+%             if exist('both_contain_str','var')
+%                 error()
+%             end
+%             if exist('one_contain_str','var')
+%                 error()
+%             end
+            if ~exist('weight1_over_2','var')
+                weight1_over_2 = 1;
+            end
+            if ~exist('non_neg','var')
+                non_neg = true;
+            end
+            
+            vec1 = self.y_struct.(fname1);
+            vec2 = self.y_struct.(fname2);
+            y_vals = self.combine_two_y_vals(vec1, vec2, ...
+                weight1_over_2, non_neg);
+            
+            y_name = self.make_valid_name('combine_',...
+                [fname1(1:5) '_' fname2(1:5)]);
+            self.y_struct.(y_name) = y_vals;
+        end
+        
+        function save_simulation(self, setting_val, these_obj)
+            % If it's not a field, create the field; otherwise, append
+            fname = self.make_valid_name(setting_val);
+            if ~isfield(self.obj_struct, fname)
+                self.obj_struct.(fname) = these_obj;
+            else
+                self.obj_struct.(fname) = ...
+                    [self.obj_struct.(fname) these_obj];
+            end
+        end
+        
+        function fname = make_valid_name(self, val1, val2)
+            if exist('val2','var')
+                % Note: if it EXISTS
+                if iscell(val2)
+                    assert(iscell(val1),...
+                        'Can only combine cells with cells')
+                    fname = self.make_valid_name(...
+                        [val1(1:end-1) {[val1{end} '_' val2{:}]}]);
+                    fname = fname{1};
+                elseif ischar(val2)
+                    assert(ischar(val2),...
+                        'Can only combine chars with chars')
+                    fname = self.make_valid_name([val1 val2]);
+                else
+                    error('Unable to combine names')
+                end
+                return
+            end
+            if iscell(val1)
+                fname = cell(length(val1),1);
+                for i=1:length(val1)
+                    fname{i} = self.make_valid_name(val1{i});
+                end
+                return;
+            end
+            if ~isvarname(val1)
+                fname = char(matlab.lang.makeValidName(...
+                    "val" + string(val1) ));
+            else
+                fname = val1;
             end
         end
     end
     
     methods % Plotting
-        function fig = plot_pareto_front(self, which_settings, fig)
+        function fig = plot_pareto_front(self, ...
+                which_settings, to_contain_str, fig)
+            % Plots a pareto front
+            %   If to_contain_str, then which_settings is taken to be a
+            %   substring that all relevant fields should contain, rather
+            %   than the full field name
+            if ~exist('to_contain_str','var')
+                to_contain_str = false;
+            end
             if ~exist('which_settings', 'var')
                 which_settings = fieldnames(self.y_struct);
             end
             if ~exist('fig', 'var')
                 fig = figure('DefaultAxesFontSize',14);
                 hold on
+            end
+            
+            if to_contain_str
+                fnames = fieldnames(self.y_struct);
+                which_settings = fnames(contains(fnames, which_settings));
             end
             
             for i=1:length(which_settings)
@@ -202,10 +293,13 @@ classdef ParetoFrontObj < SettingsImportableFromStruct
             end
             
             ylabel('Error')
-            xlabel(self.x_fieldname)
-            legend(which_settings)
+            xlabel(self.x_fieldname, 'Interpreter', 'None')
+            legend(which_settings, 'Interpreter', 'None')
         end
         
+    end
+    
+    methods % Produce new y values
     end
     
     methods (Hidden=true)
@@ -233,12 +327,41 @@ classdef ParetoFrontObj < SettingsImportableFromStruct
             if ischar(field)
                 y = obj.(field);
             elseif iscell(field)
-                assert(length(field)==2,... 
-                    'Only 2 fieldnames supported')
-                y = obj.(field{1}).(field{2});
+                if length(field)==1
+                    y = obj.(field{1});
+                elseif length(field)==2
+                    y = obj.(field{1}).(field{2});
+                else
+                    error('Only 2 fieldnames supported')
+                end
             else
                 error('Unsupported field format')
             end
+        end
+        
+        function y = combine_two_y_vals(vec1, vec2, ...
+                weight1_over_2, non_neg)
+            % Combines two different y values by whitening them and then
+            % weighting (default is same weight to both)
+            if ~exist('weight1_over_2','var')
+                weight1_over_2 = 1;
+            end
+            if ~exist('non_neg','var')
+                non_neg = true;
+            end
+            
+            % Whiten
+            vec1 = vec1 - mean(vec1);
+            vec1 = vec1/std(vec1);
+            vec2 = vec2 - mean(vec2);
+            vec2 = vec2/std(vec2);
+            
+            % Combine
+            y = vec1 + vec2/weight1_over_2;
+            if non_neg
+                y = y - min(y);
+            end
+            
         end
     end
     
