@@ -180,42 +180,13 @@ classdef ParetoFrontObj < SettingsImportableFromStruct
                 for j=1:sz
                     y_vals(j) = self.y_val_func(these_obj{j}, which_class);
                 end
-                y_name = self.make_valid_name(...
-                    self.iterate_settings.(fieldname), which_class);
+                y_name = self.make_valid_name(this_line_name, which_class);
+                if isfield(self.y_struct, y_name)
+                    warning('Overwriting y values in field %s',...
+                        y_name)
+                end
                 self.y_struct.(y_name) = y_vals;
             end
-        end
-        
-        function save_combined_y_val(self, fname1, fname2, ...
-                weight1_over_2, non_neg)
-%                 both_contain_str, one_contain_str)
-            % Uses already saved y_vals
-            %   Should have the same number of values saved
-            %   Can combine different fields by a substring of their
-            %   fieldname, use both_contain_str for substrings they should
-            %   both contain and one_contain_str for strings only one
-            %   should contain... TODO
-%             if exist('both_contain_str','var')
-%                 error()
-%             end
-%             if exist('one_contain_str','var')
-%                 error()
-%             end
-            if ~exist('weight1_over_2','var')
-                weight1_over_2 = 1;
-            end
-            if ~exist('non_neg','var')
-                non_neg = true;
-            end
-            
-            vec1 = self.y_struct.(fname1);
-            vec2 = self.y_struct.(fname2);
-            y_vals = self.combine_two_y_vals(vec1, vec2, ...
-                weight1_over_2, non_neg);
-            
-            y_name = self.make_valid_name('combine_',...
-                [fname1(1:5) '_' fname2(1:5)]);
-            self.y_struct.(y_name) = y_vals;
         end
         
         function save_simulation(self, setting_val, these_obj)
@@ -230,22 +201,33 @@ classdef ParetoFrontObj < SettingsImportableFromStruct
         end
         
         function fname = make_valid_name(self, val1, val2)
+            % Makes a valid name from inputs
+            % Input:
+            %   val1 - a valid input to the string() function or a cell
+            %           array. If an array, then the return value is the
+            %           same length
+            %   val2 (optional) - Combines val2 to  
             if exist('val2','var')
                 % Note: if it EXISTS
                 if iscell(val2)
-                    assert(iscell(val1),...
-                        'Can only combine cells with cells')
-                    fname = self.make_valid_name(...
-                        [val1(1:end-1) {[val1{end} '_' val2{:}]}]);
-                    fname = fname{1};
-                elseif ischar(val2)
-                    assert(ischar(val2),...
-                        'Can only combine chars with chars')
-                    fname = self.make_valid_name([val1 val2]);
+                    val2 = strjoin(val2,'_');
+                end
+                assert(ischar(val2),...
+                    '2nd argument must be a cell or character array');
+                if ischar(val1)
+                    % Then the output is a single name
+                    fname = self.make_valid_name([val1, '_', val2]);
+                elseif iscell(val1)
+                    % Then add val2 onto each of val1
+                    fname = cell(length(val1),1);
+                    for i=1:length(val1)
+                        fname{i} = self.make_valid_name(...
+                            val1{i}, val2);
+                    end
                 else
                     error('Unable to combine names')
                 end
-                return
+                return;
             end
             if iscell(val1)
                 fname = cell(length(val1),1);
@@ -255,6 +237,7 @@ classdef ParetoFrontObj < SettingsImportableFromStruct
                 return;
             end
             if ~isvarname(val1)
+                % e.g. val1=0.5, output 'val0_5'
                 fname = char(matlab.lang.makeValidName(...
                     "val" + string(val1) ));
             else
@@ -275,6 +258,11 @@ classdef ParetoFrontObj < SettingsImportableFromStruct
             end
             if ~exist('which_settings', 'var')
                 which_settings = fieldnames(self.y_struct);
+            elseif ~ismember(which_settings,fieldnames(self.y_struct))
+                if ~to_contain_str
+                    warning('Fieldname not found; assuming substring')
+                end
+                to_contain_str = true;
             end
             if ~exist('fig', 'var')
                 fig = figure('DefaultAxesFontSize',14);
@@ -300,6 +288,49 @@ classdef ParetoFrontObj < SettingsImportableFromStruct
     end
     
     methods % Produce new y values
+        function save_combined_y_val(self, fname1, fname2, ...
+                weight1_over_2, non_neg)
+%                 both_contain_str, one_contain_str)
+            % Uses already saved y_vals
+            %   Should have the same number of values saved
+            %   Can combine different fields by a substring of their
+            %   fieldname, use both_contain_str for substrings they should
+            %   both contain and one_contain_str for strings only one
+            %   should contain... TODO
+            if ~exist('weight1_over_2','var')
+                weight1_over_2 = 1;
+            end
+            if ~exist('non_neg','var')
+                non_neg = true;
+            end
+            
+            vec1 = self.y_struct.(fname1);
+            vec2 = self.y_struct.(fname2);
+            y_vals = self.combine_two_y_vals(vec1, vec2, ...
+                weight1_over_2, non_neg);
+            
+            y_name = self.make_valid_name('combine_',...
+                [fname1(1:10) '_' fname2(1:10)]);
+            self.y_struct.(y_name) = y_vals;
+        end
+        
+        function save_baseline(self, fname, baseline_func, line_name)
+            % Uses baseline_func on the FIRST object saved in the
+            % obj_struct under fname; assumes the value is the same for all
+            % entries in the cell array
+            if ~exist('line_name', 'var')
+                line_name = self.make_valid_name('baseline_', fname);
+            else
+                line_name = self.make_valid_name('baseline_', line_name);
+            end
+            baseline_vals = ones(length(self.x_vector),1) * ...
+                baseline_func(...
+                self.obj_struct.(fname){1});
+            if isfield(self.y_struct, line_name)
+                warning('Overwriting line stored in %s', line_name)
+            end
+            self.y_struct.(line_name) = baseline_vals;
+        end
     end
     
     methods (Hidden=true)
