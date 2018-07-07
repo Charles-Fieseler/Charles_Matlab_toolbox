@@ -27,7 +27,6 @@ classdef AbstractDmd < SettingsImportableFromStruct
     %========================================
     
     properties (Hidden=true)
-        raw
         dat
         verbose
         model_order
@@ -50,6 +49,11 @@ classdef AbstractDmd < SettingsImportableFromStruct
         %Plotter dictionary, if option is used
         PlotterDmd_all
     end
+    
+    properties (Hidden=true, Transient=true)
+        raw
+    end
+    
     
     methods
         
