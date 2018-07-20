@@ -157,7 +157,7 @@ classdef ParetoFrontObj < SettingsImportableFromStruct
             self.save_y_vals();
         end
         
-        function save_y_vals(self, fieldname, which_class)
+        function save_y_vals(self, fieldname, which_class, y_func)
             if ~exist('fieldname', 'var')
                 fieldname = fieldnames(self.iterate_settings);
                 fieldname = fieldname{1};
@@ -167,6 +167,9 @@ classdef ParetoFrontObj < SettingsImportableFromStruct
                     self.save_y_vals(fieldname, self.fields_to_plot{i});
                 end
                 return
+            end
+            if ~exist('y_func','var')
+                y_func = self.y_val_func;
             end
             
             sz = length(self.x_vector);
@@ -178,9 +181,15 @@ classdef ParetoFrontObj < SettingsImportableFromStruct
                 y_vals = zeros(sz,1);
                 these_obj = self.obj_struct.(this_line_name);
                 for j=1:sz
-                    y_vals(j) = self.y_val_func(these_obj{j}, which_class);
+                    y_vals(j) = y_func(these_obj{j}, which_class);
                 end
-                y_name = self.make_valid_name(this_line_name, which_class);
+                if ~isempty(which_class)
+                    y_name = ...
+                        self.make_valid_name(this_line_name, which_class);
+                else
+                    y_name = ...
+                        self.make_valid_name(this_line_name, 'custom_func');
+                end
                 if isfield(self.y_struct, y_name)
                     warning('Overwriting y values in field %s',...
                         y_name)
@@ -289,7 +298,7 @@ classdef ParetoFrontObj < SettingsImportableFromStruct
     
     methods % Produce new y values
         function save_combined_y_val(self, fname1, fname2, ...
-                weight1_over_2, non_neg)
+                scale1_over_2)
 %                 both_contain_str, one_contain_str)
             % Uses already saved y_vals
             %   Should have the same number of values saved
@@ -297,17 +306,24 @@ classdef ParetoFrontObj < SettingsImportableFromStruct
             %   fieldname, use both_contain_str for substrings they should
             %   both contain and one_contain_str for strings only one
             %   should contain... TODO
-            if ~exist('weight1_over_2','var')
-                weight1_over_2 = 1;
-            end
-            if ~exist('non_neg','var')
-                non_neg = true;
+            % Can optionally pass fname2 as a scalar which will combine vec1
+            % with a vector of ones*(that scalar). Useful to get baselines
+            % in the same "units" as other combinations
+            if ~exist('scale1_over_2','var')
+                scale1_over_2 = [];
             end
             
             vec1 = self.y_struct.(fname1);
-            vec2 = self.y_struct.(fname2);
+            if isscalar(fname2)
+                vec2 = ones(size(vec1))*fname2;
+                fname2 = 'ones';
+            elseif ischar(fname2)
+                vec2 = self.y_struct.(fname2);
+            else
+                error('fname2 must be a scalar or a char array')
+            end
             y_vals = self.combine_two_y_vals(vec1, vec2, ...
-                weight1_over_2, non_neg);
+                scale1_over_2);
             
             y_name = self.make_valid_name('combine_',...
                 [fname1(1:10) '_' fname2(1:10)]);
@@ -318,6 +334,12 @@ classdef ParetoFrontObj < SettingsImportableFromStruct
             % Uses baseline_func on the FIRST object saved in the
             % obj_struct under fname; assumes the value is the same for all
             % entries in the cell array
+            % Input:
+            %   fname - name of the field where the object is stored
+            %   baseline_func - function handle that takes an object of
+            %                   that type and returns a scalar
+            %   line_name ('baseline_%s',fname) - a custom string for the
+            %                   saved new line name
             if ~exist('line_name', 'var')
                 line_name = self.make_valid_name('baseline_', fname);
             else
@@ -370,7 +392,7 @@ classdef ParetoFrontObj < SettingsImportableFromStruct
             end
         end
         
-        function y = combine_two_y_vals(vec1, vec2, ...
+        function y = combine_two_y_vals_whiten(vec1, vec2, ...
                 weight1_over_2, non_neg)
             % Combines two different y values by whitening them and then
             % weighting (default is same weight to both)
@@ -392,6 +414,18 @@ classdef ParetoFrontObj < SettingsImportableFromStruct
             if non_neg
                 y = y - min(y);
             end
+            
+        end
+        
+        function y = combine_two_y_vals(vec1, vec2, ...
+                scale1_over_2)
+            % Simple multiplication of the second input by a scaling factor
+            % in order to combine the two vectors
+            if ~exist('scale1_over_2','var') || isempty(scale1_over_2)
+                scale1_over_2 = max(vec1)/max(vec2);
+            end
+            
+            y = vec1 + vec2*scale1_over_2;
             
         end
     end
