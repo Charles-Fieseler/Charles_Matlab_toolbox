@@ -1,6 +1,13 @@
 function [ bytes ] = get_size_recursive( var, verbose )
 % Non-recursive version from: 
 % https://www.mathworks.com/matlabcentral/answers/14837-how-to-get-size-of-an-object
+% Input:
+%   var - a variable or object to find the size of
+%   verbose (2) - level of verbosity:
+%                 0 = displays nothing
+%                 1 = displays some warnings about unreadable properties
+%                 2 = displays info on subcomponents
+%                 3 = [same as 2 and 1 above
 if ~exist('verbose','var')
     verbose = 2;
 end
@@ -19,8 +26,12 @@ if iscell(var)
     end
 elseif isstruct(var) || isobject(var)
     props = fieldnames(struct(var));
-    % Note: this will only skip non-private dependent properties
-    dependent_props = findAttrValue(var,'Dependent');
+    if isobject(var)
+        % Note: this will only skip non-private dependent properties
+        dependent_props = findAttrValue(var,'Dependent');
+    else
+        dependent_props = [];
+    end
     if ((verbose==2)||(verbose==3))&&bytes>0
         fprintf('  ')
     end
