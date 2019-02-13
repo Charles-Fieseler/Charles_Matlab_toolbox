@@ -33,7 +33,6 @@ classdef ParetoFrontObj < SettingsImportableFromStruct
     % Created: 22-Jun-2018
     %========================================
     
-    
     properties (SetAccess={?SettingsImportableFromStruct}, Hidden=true)
         
         file_or_dat % Can be cell array
@@ -45,6 +44,7 @@ classdef ParetoFrontObj < SettingsImportableFromStruct
         y_val_func % function to get the y values from the analysis objects
         
         to_estimate_time
+        use_parallel
     end
     
     properties
@@ -88,15 +88,25 @@ classdef ParetoFrontObj < SettingsImportableFromStruct
             assert(iscell(setting_val_array),...
                 'Settings should be an iterable cell array')
             
-            for i=1:length(setting_val_array)
-                this_setting_val = setting_val_array{i};
-                self.calculate_pareto_one_setting(...
-                    which_setting, this_setting_val);
+            if ~self.use_parallel
+                for i = 1:length(setting_val_array)
+                    this_setting_val = setting_val_array{i};
+                    self.calculate_pareto_one_setting(...
+                        which_setting, this_setting_val);
+                end
+            else
+                for i = 1:length(setting_val_array)
+                    this_setting_val = setting_val_array{i};
+                    self.calculate_pareto_one_setting_parallel(...
+                        which_setting, this_setting_val);
+                end
             end
         end
         
         function calculate_pareto_one_setting(self, ...
                 setting_name, setting_val)
+            % Iterates over a vector stored in the field 'setting_name' of
+            % the struct 'self.base_settings'
             settings = self.base_settings;
             settings.(setting_name) = setting_val;
             these_obj = cell(size(self.x_vector));
@@ -121,6 +131,30 @@ classdef ParetoFrontObj < SettingsImportableFromStruct
             
             t = toc;
             fprintf('Total time over %d runs: %f\n', i, t)
+            
+            self.save_simulation(setting_val, these_obj);
+        end
+        
+        function calculate_pareto_one_setting_parallel(self, ...
+                setting_name, setting_val)
+            % Iterates over a vector stored in the field 'setting_name' of
+            % the struct 'self.base_settings' using PARFOR
+            settings = self.base_settings;
+            settings.(setting_name) = setting_val;
+            these_obj = cell(size(self.x_vector));
+            
+            par_x_vector = self.x_vector;
+            par_fname = self.x_fieldname;
+            par_func = self.iterable_func;
+            par_fdat = self.file_or_dat;
+            
+            parfor i=1:length(self.x_vector)
+                this_x = par_x_vector(i);
+                s = settings;
+                s.(par_fname) = this_x;
+                
+                these_obj{i} = par_func(par_fdat, s);
+            end
             
             self.save_simulation(setting_val, these_obj);
         end
@@ -272,6 +306,8 @@ classdef ParetoFrontObj < SettingsImportableFromStruct
                     warning('Fieldname not found; assuming substring')
                 end
                 to_contain_str = true;
+            elseif ischar(which_settings)
+                which_settings = {which_settings};
             end
             if ~exist('fig', 'var')
                 fig = figure('DefaultAxesFontSize',14);
@@ -367,7 +403,8 @@ classdef ParetoFrontObj < SettingsImportableFromStruct
                 'x_fieldname', '_',...
                 'y_val_func', @(obj, field) self.get_y_default(obj,field),...
                 'fields_to_plot', {{'_'}},...
-                'to_estimate_time', 1);
+                'to_estimate_time', 1,...
+                'use_parallel', false);
             for key = fieldnames(defaults).'
                 k = key{1};
                 self.(k) = defaults.(k);
