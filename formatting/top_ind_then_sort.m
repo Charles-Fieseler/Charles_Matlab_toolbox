@@ -1,7 +1,7 @@
 function [ordered_dat, ordered_ind] = top_ind_then_sort(...
     dat, top_x, threshold)
 % Takes the largest values of the absolute value of the dataset, then
-% resorts them by their signed value
+% re-sorts them by their signed value
 %
 % Input:
 %   dat - the data matrix
@@ -20,7 +20,7 @@ else
     ordered_ind = find(all_rows > threshold);
 end
 % Re-sort it
-[~, sort_ind] = sort(dat(ordered_ind,1), 'ascend');    
+[~, sort_ind] = sort(dat(ordered_ind,1), 'descend');    
 ordered_ind = ordered_ind(sort_ind);
 ordered_dat = dat(ordered_ind, :);
 

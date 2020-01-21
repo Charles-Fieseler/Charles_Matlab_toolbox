@@ -1,5 +1,5 @@
 function [num_fp, num_fn, num_spikes, ind_fp, ind_fn,...
-    true_pos, fig, true_spike_ind] = ...
+    true_pos, fig, true_spike_ind, true_neg] = ...
     calc_false_detection(dat, reconstruction, threshold_factor,...
     length_for_detection, window_true_spike, to_plot,...
     use_partial_detection, use_peak_prominence)
@@ -152,6 +152,16 @@ else
     end
 end
 
+%% Calculate approximate true negatives
+f = @(x) length(find(x));
+spike_length = [f(ind_fp)/num_fp, f(true_spike_ind)/true_pos];
+spike_length = mean(spike_length(logical(...
+    ~isnan(spike_length).*~isinf(spike_length) )));
+num_true_neg_frames = length(dat) - ...
+    (f(ind_fp) + f(ind_fn) + f(true_spike_ind));
+
+true_neg = num_true_neg_frames / spike_length;
+
 %% Plot
 if to_plot
     fig = figure('DefaultAxesFontSize', 14);
@@ -175,6 +185,8 @@ if to_plot
         legend_str = [legend_str 'Threshold'];
     end
     legend(legend_str)
+else
+    fig = [];
 end
 
 end

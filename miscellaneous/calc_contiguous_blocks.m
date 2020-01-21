@@ -38,9 +38,17 @@ end
 % Remove small blocks and connect small gaps
 if gap_length_okay > 0
     all_gap_lengths = all_starts(2:end) - all_ends(1:end-1);
-    ind = (all_gap_lengths >= gap_length_okay);
-    all_ends = all_ends(ind);
-    all_starts = all_starts(ind);
+    long_enough = (all_gap_lengths >= gap_length_okay);
+    start_ind = true(size(all_starts));
+    end_ind = true(size(all_starts));
+    for i = 1:length(long_enough)
+        if ~long_enough(i)
+            start_ind(i+1) = false;
+            end_ind(i) = false;
+        end
+    end
+    all_ends = all_ends(end_ind);
+    all_starts = all_starts(start_ind);
 end
 
 all_block_lengths = all_ends - all_starts + 1;
