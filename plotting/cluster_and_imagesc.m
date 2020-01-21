@@ -60,7 +60,7 @@ end
 
 ylim([0.5, n+0.5])
 xlim([0.5, n+0.5])
-if exist('labels', 'var')
+if exist('labels', 'var') && ~isempty(labels)
     yticks(1:n)
     xticks(1:n)
     xtickangle(90)

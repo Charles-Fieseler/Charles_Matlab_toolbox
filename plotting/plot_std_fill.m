@@ -1,6 +1,10 @@
 function fig = plot_std_fill(dat, dim, tspan, alpha, fig)
 % Plots the mean of the data plus or minus the standard deviation...
 % assumes a matrix of data
+%
+% fig = plot_std_fill(dat, dim, tspan, alpha, fig)
+%
+% Only 'dat' and 'dim' are required
 if ~exist('tspan', 'var') || isempty(tspan)
     tspan = (1:size(dat, 3-dim))';
 end
