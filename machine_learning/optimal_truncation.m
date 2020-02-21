@@ -5,7 +5,7 @@ function r = optimal_truncation(Y)
 [m, n] = size(Y);
 [U, D, V] = svd(Y); 
 d = diag(D);
-val = optimal_SVHT_coef_sigma_unknown(m/n,false);
+val = optimal_SVHT_coef(m/n,false);
 
 r = floor(val*median(d));
 
