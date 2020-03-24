@@ -1,5 +1,5 @@
 function [fig] = boxplot_on_table(table_dat, row, cmap, ...
-    xlabel_mode, fig)
+    xlabel_mode, fig, linewidth)
 % Makes boxplots work with a table, plotting a single row with the columns
 % as grouping variables
 %   Assumes each entry is a column vector
@@ -15,13 +15,19 @@ end
 if ~exist('xlabel_mode', 'var')
     xlabel_mode = 'columns';
 end
-if ~exist('fig', 'var')
+if ~exist('fig', 'var') || isempty(fig)
     fig = figure('DefaultAxesFontSize', 12);
+end
+if ~exist('linewidth', 'var')
+    linewidth = 1.0;
 end
 
 if ~isempty(row) && (isnumeric(row) || ischar(row))
     % Just plot one row
     this_dat_cell = table_dat{row, :};
+    if ~iscell(this_dat_cell)
+        this_dat_cell = {this_dat_cell};
+    end
     this_dat_vec = vertcat(this_dat_cell{:});
     [grouping_ind] = cell2group_ind(this_dat_cell);
 
@@ -40,6 +46,9 @@ else
     % Plot all rows
     for iRow = 1:num_rows
         this_dat_cell = table_dat{iRow, :};
+        if ~iscell(this_dat_cell)
+            this_dat_cell = {this_dat_cell};
+        end
         all_dat = [all_dat; vertcat(this_dat_cell{:})];
         
         all_grouping_ind = [all_grouping_ind; ...
@@ -55,7 +64,7 @@ else
     h = boxplot(all_dat, all_grouping_ind, ...
         'Color', cmap,...
         'Positions', all_pos);
-%     set(h,{'linew'},{1.5})
+    set(h,{'linew'},{linewidth})
     
     if strcmp(xlabel_mode, 'columns')
         all_labels = repmat(...
