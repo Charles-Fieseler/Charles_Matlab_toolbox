@@ -3,6 +3,13 @@ function [u,s,v,proj3d] = plotSVD( dat, which_plots )
 %and the trajectory in those modes
 % The input parameters are:
 %   dat = the data of use. Note that we plot the SVD modes along the rows
+%   which_plots = a struct of settings with the following values:
+%     'average',false = Plot the averages
+%     'sigma',true = Plots singular values
+%     'PCA3d',false = Plots 3d trajectory
+%     'PCA_opt','o' = Plot options for 3d trajectory
+%     'sigma_modes',[1 2] = Which modes to use as x/y/z axes
+%     'to_subtract_mean',true
 
 %% Defaults: plot only singular value decay
 if ~exist('which_plots','var')
