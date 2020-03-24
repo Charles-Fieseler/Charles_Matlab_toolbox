@@ -7,7 +7,7 @@ function r = optimal_truncation(Y)
 d = diag(D);
 val = optimal_SVHT_coef(m/n,false);
 
-r = floor(val*median(d));
+r = find(d > val*median(d), 1, 'last');
 
 % y = diag(Y); 
 % y( y < (optimal_SVHT_coef_sigma_unknown(m/n,0) * median(y)) ) = 0; 
