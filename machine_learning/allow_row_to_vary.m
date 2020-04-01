@@ -48,8 +48,9 @@ X = local_path.data;
 
 switch objective_func_str
     case 'cv'
-        objective_func = @(U) ...
+        tmp_func = @(U) ...
             dmdc_cross_val(X, U, k, num_error_steps, [], false);
+        objective_func = @(U) get_2nd(tmp_func, U);
     case 'aic'
         objective_func = @(U) ...
             aic_2step_dmdc(X, U, [], [], num_err_steps, false, ...
@@ -100,8 +101,7 @@ for iOuter = 1:num_outer_iterations
 %         end
         out = local_path.iterate_single_row(...
                 base_U, ind_to_test, iRow, objective_func);
-        all_err = flatten_cell_array(out); % TODO
-        error();
+        all_err = cell2newdim(out); 
         % TEST: subtract the mean instead of the abolute errors to better
         % compare folds
         all_err = all_err - mean(all_err,1);
