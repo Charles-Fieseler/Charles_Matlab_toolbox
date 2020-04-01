@@ -1,17 +1,21 @@
 function [fig, c, all_ind] = ...
-    cluster_and_imagesc(all_dist, c, labels, line_opt)
+    cluster_and_imagesc(all_dist, c, labels, line_opt, dat)
 % For use in visualizing symmetric matrices with clusters, e.g. correlation
 % or distance matrices.
 % 
 % Input:
-%   all_dist - the distance matrix; should be symmetric
+%   all_dist - the distance matrix; should be symmetric. For example:
+%           all_dist = squareform(pdist(dat, 'correlation'));
 %   c - a function handle that takes one arg to calculate clusters, or a
 %       vector of integer cluster labels if already calculated. Default
 %       attempts to guess the optimal number of k-means cluster using the
-%       'gap' metric
-%   labels (none) - cell array of names for the x and y axes, if any
+%       'gap' metric. For example:
+%           c = @(X) cluster(linkage(X,'Ward'), 'maxclust',k);
+%   labels (none) - cell array of names for the x and y ticks (e.g. names
+%       of original signals), if any. (very helpful)
 %   line_opt (none) - struct of line options for use between classes; if
 %       nothing is passed, does not plot lines.
+%   dat (none) - for interactive plotting
 %   
 % Output:
 %   fig - handle to the produced figures
@@ -25,6 +29,7 @@ if ~exist('c', 'var') || isempty(c)
         'linkage', 'gap', 'KList', 1:10);
     k = E.OptimalK;
     fprintf('The optimal number of clusters is %d\n', k)
+%     c = @(X) cluster(linkage(X,'Ward'), 'maxclust',k);
     c = @(X) cluster(linkage(X,'Ward'), 'maxclust',k);
     c = c(all_dist);
 elseif ~isnumeric(c)
@@ -69,5 +74,6 @@ if exist('labels', 'var') && ~isempty(labels)
 end
 
 colorbar
+
 end
 
