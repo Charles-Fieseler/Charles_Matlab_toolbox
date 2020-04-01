@@ -19,7 +19,7 @@ else
 end
 
 num_states = length(unique(categories));
-if ~exist('cmap', 'var')
+if ~exist('cmap', 'var') || isempty(cmap)
     cmap = lines(num_states);
     if num_states>7
         % Makes the 8th and later categories black (otherwise would repeat)
@@ -35,8 +35,10 @@ if ~exist('fig', 'var')
 end
 hold on
 f = gca;
-for jC = unique(categories)
-    ind = find(categories==jC);
+unique_cats = unique(categories);
+for jC = 1:length(unique_cats)
+    this_cat = unique_cats(jC);
+    ind = find(categories==this_cat);
     if contains(plot_options,'plot')
         plot3(x(ind), y(ind), z(ind), 'color', cmap(jC,:));
     elseif ~contains(plot_options,'.')
