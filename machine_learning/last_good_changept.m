@@ -25,6 +25,9 @@ end
 if ~exist('lambda2', 'var')
     lambda2 = 1;
 end
+if ~exist('threshold_from_changept', 'var')
+    threshold_from_changept = false;
+end
 
 all_se = std(vals, [], 2);
 all_means = mean(vals,2);
