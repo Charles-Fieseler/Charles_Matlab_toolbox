@@ -31,7 +31,10 @@ end
 all_mins = find(islocalmin(all_means, 'FlatSelection', 'last'));
 all_mins = [all_mins; length(all_means)]; % Allow the last entry to be selected
 
-min_ind = find(all_means(all_mins)<min_plus, 1, 'last');
+min_ind = find(all_means(all_mins)<=min_plus, 1, 'last');
+if isempty(min_ind)
+    min_ind = length(all_mins);
+end
 min_ind = all_mins(min_ind);
 min_val = all_means(min_ind);
 
