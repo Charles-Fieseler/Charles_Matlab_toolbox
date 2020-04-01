@@ -53,8 +53,10 @@ switch objective_func_str
         objective_func = @(U) get_2nd(tmp_func, U);
     case 'aic'
         objective_func = @(U) ...
-            aic_2step_dmdc(X, U, [], [], num_err_steps, false, ...
-                'standard');
+            repmat(... % Needs to be the same shape as cross-validation
+            aic_multi_step_dmdc(X, U, [], [], num_error_steps, false, ...
+                'standard'),...
+            1, k-1);
     otherwise
         error('Unrecognized objective function')
 end
@@ -66,7 +68,6 @@ num_alg_iters = length(local_path.all_U);
 num_hyper = length(num_error_steps);
 
 ind_to_test = 1:num_alg_iters;
-
 
 
 warning off
@@ -85,8 +86,9 @@ for iOuter = 1:num_outer_iterations
         base_U = best_U;
     end
     for iRow = 1:size(base_U, 1)
+        fprintf('Varying row %d/%d\n', iRow, size(base_U, 1));
         % Loop through each control signals channel (row)
-        all_err = zeros(length(ind_to_test), num_hyper, num_folds);
+%         all_err = zeros(length(ind_to_test), num_hyper, num_folds);
 %         for iIter = 1:length(ind_to_test)
 %             % Retry all sparsity possibilities, leaving other rows same
 %             this_U = base_U;
@@ -102,6 +104,8 @@ for iOuter = 1:num_outer_iterations
         out = local_path.iterate_single_row(...
                 base_U, ind_to_test, iRow, objective_func);
         all_err = cell2newdim(out); 
+        assert(isequal(size(all_err), ...
+            [length(ind_to_test), num_hyper, num_folds]))
         % TEST: subtract the mean instead of the abolute errors to better
         % compare folds
         all_err = all_err - mean(all_err,1);
