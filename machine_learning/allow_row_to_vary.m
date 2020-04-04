@@ -63,12 +63,12 @@ switch objective_func_str
             aic_multi_step_dmdc(X, U, [], [], num_error_steps, true, ...
                 'standard'),...
             1, k-1);
-%     case 'multivariate'
-%         objective_func = @(U) ...
-%             repmat(... % Needs to be the same shape as cross-validation
-%             aic_multi_step_dmdc(X, U, [], [], num_error_steps, false, ...
-%                 'multivariate'),...
-%             1, k-1);
+    case 'multivariate_cumulative'
+        objective_func = @(U) ...
+            repmat(... % Needs to be the same shape as cross-validation
+            cumsum(aic_multi_step_dmdc(X, U, [], [], num_error_steps, false, ...
+                'multivariate')),...
+            1, k-1);
     otherwise
         error('Unrecognized objective function')
 end
@@ -100,18 +100,6 @@ for iOuter = 1:num_outer_iterations
     for iRow = 1:size(base_U, 1)
         fprintf('Varying row %d/%d\n', iRow, size(base_U, 1));
         % Loop through each control signals channel (row)
-%         all_err = zeros(length(ind_to_test), num_hyper, num_folds);
-%         for iIter = 1:length(ind_to_test)
-%             % Retry all sparsity possibilities, leaving other rows same
-%             this_U = base_U;
-%             this_row_i = ind_to_test(iIter);
-%             new_row_U = local_path.all_U{this_row_i};
-%             this_U(iRow,:) = new_row_U(iRow,:);
-% %             [~, all_err(iIter,:,:)] = ...
-% %                 dmdc_cross_val(X, this_U, k, num_error_steps, ...
-% %                 [], false);
-%             [~, all_err(iIter,:,:)] = ...
-%                 objective_func(X, this_U, num_error_steps);
 %         end
         out = local_path.iterate_single_row(...
                 base_U, ind_to_test, iRow, objective_func);
@@ -131,7 +119,6 @@ for iOuter = 1:num_outer_iterations
             [tmp_best_val(i), tmp_best_ind(i)] = min_func(...
                 squeeze(all_err(:,i,:)), lambda, false, cap_at_0);
         end
-%         [~, tmp_min_ind] = min(all_err_means);
         
         % Convert back if testing doesn't start at first indices
         tmp_best_ind = tmp_best_ind + ind_to_test(1)-1;
@@ -143,7 +130,6 @@ for iOuter = 1:num_outer_iterations
         else
             fprintf('Old best iteration: %d\n', tmp_best_ind(iRow));
         end
-%         fprintf('New minimum iteration: %d\n', tmp_min_ind);
         fprintf('New best iteration: %d\n', tmp_best_ind);
         
         %
@@ -160,8 +146,6 @@ for iOuter = 1:num_outer_iterations
                 local_path.all_U{...
                 hyper_min_1se_ind(iRow2, iHyper)}(iRow2,:);
         end
-    %     hyper_min_1se_ind{iHyper} = new_min_1se_ind;
-    %     hyper_min_1se_err{iHyper} = new_min_1se_err;
         hyper_best_U(:, :, iHyper) = tmp_best_U;
     end
     if num_outer_iterations > 1
