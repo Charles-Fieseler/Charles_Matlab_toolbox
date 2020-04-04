@@ -57,6 +57,18 @@ switch objective_func_str
             aic_multi_step_dmdc(X, U, [], [], num_error_steps, false, ...
                 'standard'),...
             1, k-1);
+    case 'aicc'
+        objective_func = @(U) ...
+            repmat(... % Needs to be the same shape as cross-validation
+            aic_multi_step_dmdc(X, U, [], [], num_error_steps, true, ...
+                'standard'),...
+            1, k-1);
+%     case 'multivariate'
+%         objective_func = @(U) ...
+%             repmat(... % Needs to be the same shape as cross-validation
+%             aic_multi_step_dmdc(X, U, [], [], num_error_steps, false, ...
+%                 'multivariate'),...
+%             1, k-1);
     otherwise
         error('Unrecognized objective function')
 end
@@ -108,13 +120,15 @@ for iOuter = 1:num_outer_iterations
             [length(ind_to_test), num_hyper, num_folds]))
         % TEST: subtract the mean instead of the abolute errors to better
         % compare folds
-        all_err = all_err - mean(all_err,1);
+        if strcmp(objective_func_str, 'cv')
+            all_err = all_err - mean(all_err,1);
+        end
         % Process into best row (not simple min)
         sz = size(all_err);
         tmp_best_ind = zeros(sz(2), 1);
         tmp_best_val = zeros(sz(2), 1);
         for i = 1:sz(2)
-            [tmp_best_ind(i), tmp_best_val(i)] = min_func(...
+            [tmp_best_val(i), tmp_best_ind(i)] = min_func(...
                 squeeze(all_err(:,i,:)), lambda, false, cap_at_0);
         end
 %         [~, tmp_min_ind] = min(all_err_means);
